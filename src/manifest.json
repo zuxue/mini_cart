@@ -1,0 +1,16 @@
+{
+  "name": "WILD MARKET",
+  "appid": "__UNI__WILDMARKET",
+  "description": "WILD MARKET 精品生活电商小程序",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "touristappid",
+    "setting": { "urlCheck": false, "es6": true, "minified": true }
+  },
+  "mp-alipay": {
+    "component2": true,
+    "enableAppxNg": true
+  }
+}

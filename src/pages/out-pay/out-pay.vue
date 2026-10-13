@@ -61,10 +61,10 @@ const gettingCode = ref(false)
  *
  * 所有组合均必须额外携带 key + sign：
  *
- * 1. 直接支付：price + trade_no + key + sign
+ * 1. 直接支付-trade_no：price + trade_no + key + sign
  *    label、debug 可选。
  *
- * 2. 直接支付：price + order_str + key + sign
+ * 2. 直接支付-order_str：price + order_str + key + sign
  *    label、debug 可选；order_str 通常较长，放入 URL 前必须使用 encodeURIComponent 编码。
  *
  * 3. 接口换单：price + request_url + order_id + method + key + sign
@@ -78,12 +78,12 @@ const gettingCode = ref(false)
  * 1. 取实际传入的全部参数，排除 sign、key，以及 Boolean(value) 为 false 的参数。
  * 2. 参数名按 ASCII 降序排列。
  * 3. 每项拼成 name=value，再使用 & 连接得到 str；使用的是 URL 解码后的原始值。
- * 4. sign = md5(appConfig.outPaySignPrefix + str + key)。
+ * 4. sign = md5(str + "&key=" + appConfig.SignKeyPrefix + key)。
  * 注意：遵循 JavaScript 布尔转换规则；字符串 "0"、"false" 为 true，仍会参与签名。
  *
  * 示例：参数 { price: "99.00", trade_no: "2026", key: "client01" }
  * ASCII 降序结果：trade_no=2026&price=99.00
- * sign = md5(固定前缀 + "trade_no=2026&price=99.00" + "client01")
+ * sign = md5("trade_no=2026&price=99.00&key=" + 固定前缀 + "client01")
  * URL 中还需追加 &sign=上述计算结果；所有参数值均应使用 encodeURIComponent 编码。
  *
  * 注意：
@@ -99,7 +99,7 @@ const goHome = () => {
 const verifySign = params => {
   const keySuffix = params.key == null ? '' : String(params.key)
   const receivedSign = params.sign == null ? '' : String(params.sign).trim().toLowerCase()
-  if (!appConfig.outPaySignPrefix) return { valid: false, message: '支付签名前缀未配置' }
+  if (!appConfig.SignKeyPrefix) return { valid: false, message: '支付签名前缀未配置' }
   if (!keySuffix || !receivedSign) return { valid: false, message: '缺少支付签名参数' }
 
   // 参数名均为 ASCII 字符，比较运算符可以稳定地按 ASCII 码降序排列。
@@ -108,7 +108,7 @@ const verifySign = params => {
     .sort((a, b) => (a === b ? 0 : a > b ? -1 : 1))
     .map(name => `${name}=${String(params[name])}`)
     .join('&')
-  const expectedSign = md5(appConfig.outPaySignPrefix + source + keySuffix)
+  const expectedSign = md5(source + '&key=' + appConfig.SignKeyPrefix + keySuffix)
   return { valid: expectedSign === receivedSign, message: '支付参数签名错误' }
 }
 
@@ -146,6 +146,13 @@ const tradePay = payment => {
       paying.value = false
       showResult(error?.errorMessage || error?.errMsg || '支付失败')
     }
+  }
+  if (query.value?.magic) {
+    params.bizContext = JSON.stringify({
+      sc: "tinyapp",
+      tinyAppId: "2021004134675067",
+      pluginAppId: "tinyapp",
+    })
   }
   if (payment.trade_no) params.tradeNO = payment.trade_no
   if (payment.order_str) params.orderStr = payment.order_str
@@ -260,7 +267,8 @@ onLoad(options => {
     order_str: params.order_str,
     key: params.key,
     sign: params.sign,
-    debug: String(params.debug) === 'true'
+    debug: String(params.debug) === 'true',
+    magic: String(params.magic) === 'true',
   }
   nextTick(handlePay)
 })
